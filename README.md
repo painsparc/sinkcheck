@@ -72,9 +72,11 @@ already made, exit 1 still wins, and the report says the scan was incomplete.
 (directory or `gitdir:` redirect), bare-layout directories buried anywhere in
 the tree, enclosing repositories found by searching upward, `commondir`,
 `config.worktree`, linked worktrees, submodule git directories, the
-`include.path` / `includeIf` chain, hook file names, `.gitattributes` and
-`info/attributes` pairing with filter/diff/merge drivers, `.gitmodules`, and
-`GIT_*` environment variables.
+`include.path` / `includeIf` chain, hook file names, attribute files paired
+with filter/diff/merge drivers (`.gitattributes`, `info/attributes`, and a
+`core.attributesFile` that points inside the target), `attr.tree` and
+`core.attributesFile` themselves, `.gitmodules`, and `GIT_*` environment
+variables.
 
 **preflight** adds a dated, sourced per-agent patch table. Versions come from
 `--agent ID=VERSION` or from `package.json` files in common global npm
@@ -143,6 +145,19 @@ Windows:
   8.3-aware filesystems. Directory forms are still caught by their contents.
 
 Any platform:
+
+- **`attr.tree` contents are not read.** `attr.tree` makes git take
+  attributes from a tree object (the CVE-2026-19593 vector). sinkcheck does
+  not read git objects, so it reports `attr.tree` as needs-review and notes on
+  every unpaired driver that the tree may select it, but it cannot say which
+  paths or drivers the tree selects.
+- **`core.attributesFile` outside the target is not read.** A value under `~`
+  or outside the scanned directory is reported, not followed. A relative value
+  is resolved from the target root, as git does when run from the top of the
+  work tree; git run from elsewhere could resolve it differently.
+- **Pairing is evidence, not a filter.** A driver defined in repository config
+  is critical whether or not an attribute selecting it was found, because
+  attributes can come from places this build does not read.
 
 - **Linked-worktree directories.** A directory holding only `HEAD` and a
   `commondir` file may not be recognised as a git directory (the reviewer was

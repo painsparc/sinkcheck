@@ -17,6 +17,9 @@ run.
 | Enclosing repository above the target | n/a | yes: upward search, bounded by `--ceiling` |
 | `include.path` / `includeIf` chain | with the config that carries it | yes: followed (depth 10, 200 files, cycle-safe) |
 | `.gitattributes` selecting a config-defined driver | attributes travel with a clone | yes: paired with `filter`, `diff`, `merge` drivers |
+| `info/attributes` or in-target `core.attributesFile` selecting a driver | no (git dir / config does not travel) | yes: read and paired |
+| `attr.tree` naming a tree that selects a driver | no (config does not travel) | partly: the setting is reported; the tree object is not read |
+| `core.attributesFile` pointing outside the target | no | the setting is reported; the file is not read |
 | Hooks in the hooks directory | only if the git dir travels | names reported, contents never read |
 | `GIT_*` environment | no | yes |
 

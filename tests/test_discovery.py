@@ -134,6 +134,49 @@ class DiscoveryTests(unittest.TestCase):
         r = self.scan()
         self.assertTrue(any("SELECTED" in f.note for f in r.findings if f.kind == "sink"))
 
+    def test_core_attributesfile_inside_target_is_read_and_paired(self):
+        make_gitdir(self.fx.git_dir, '[core]\n\tattributesFile = .git/evil-attrs\n[filter "evil"]\n\tclean = /tmp/x\n')
+        write_file(os.path.join(self.fx.git_dir, "evil-attrs"), "*.dat filter=evil\n")
+        r = self.scan()
+        drv = [f for f in r.findings if f.kind == "sink" and f.rule.id == "filter.clean"][0]
+        self.assertIn("SELECTED", drv.note)
+        self.assertIn("evil-attrs", drv.note)
+        af = [f for f in r.findings if f.kind == "sink" and f.rule.id == "core.attributesfile"]
+        self.assertEqual(len(af), 1)
+        self.assertEqual(af[0].severity, "review")
+        self.assertIn("inside the target", af[0].note)
+        self.assertEqual(verdict_of(r)[1], 1)
+
+    def test_core_attributesfile_outside_target_is_reported_not_read(self):
+        outside = os.path.join(self.fx.outside, "attrs")
+        write_file(outside, "*.dat filter=evil\n")
+        make_gitdir(self.fx.git_dir, '[core]\n\tattributesFile = %s\n[filter "evil"]\n\tclean = /tmp/x\n' % cfg_quote(outside.replace("\\", "/")))
+        r = self.scan()
+        af = [f for f in r.findings if f.kind == "sink" and f.rule.id == "core.attributesfile"][0]
+        self.assertIn("outside the target", af.note)
+        drv = [f for f in r.findings if f.kind == "sink" and f.rule.id == "filter.clean"][0]
+        self.assertNotIn("SELECTED", drv.note)
+        self.assertEqual(drv.severity, "critical")
+
+    def test_core_attributesfile_alone_needs_review(self):
+        make_gitdir(self.fx.git_dir, "[core]\n\tattributesFile = .git/a\n")
+        self.assertEqual(verdict_of(self.scan())[1], 2)
+
+    def test_attr_tree_is_reported_and_named_on_unpaired_drivers(self):
+        make_gitdir(self.fx.git_dir, '[attr]\n\ttree = 4b825dc642cb6eb9a060e54bf8d69288fbee4904\n[filter "evil"]\n\tclean = /tmp/x\n')
+        r = self.scan()
+        at = [f for f in r.findings if f.kind == "sink" and f.rule.id == "attr.tree"]
+        self.assertEqual(len(at), 1)
+        self.assertEqual(at[0].severity, "review")
+        drv = [f for f in r.findings if f.kind == "sink" and f.rule.id == "filter.clean"][0]
+        self.assertIn("attr.tree is set", drv.note)
+        self.assertEqual(verdict_of(r)[1], 1)
+        self.assertTrue(any("attr.tree" in x for x in r.not_examined))
+
+    def test_attr_tree_alone_needs_review(self):
+        make_gitdir(self.fx.git_dir, "[attr]\n\ttree = HEAD\n")
+        self.assertEqual(verdict_of(self.scan())[1], 2)
+
     # includes ------------------------------------------------------------
     def test_missing_include_target_is_info_not_clean_verdict_change(self):
         make_gitdir(self.fx.git_dir, "[include]\n\tpath = nowhere.cfg\n")

@@ -4,7 +4,7 @@ import io
 import os
 import unittest
 
-from tests._support import Fixture, cfg_quote, clear_git_env, write_file
+from tests._support import Fixture, Guard, cfg_quote, clear_git_env, make_gitdir, write_file
 
 from sinkcheck import agents
 from sinkcheck.cli import main
@@ -143,6 +143,34 @@ class DetectionTests(unittest.TestCase):
         )
         found = agents.detect_installed(self.data, {"npm_config_prefix": root})
         self.assertEqual(found["claude-code"][0][0], "2.1.252")
+
+    def test_detection_under_guard_reads_package_json_and_never_runs_the_agent(self):
+        """Preflight with detection on, under the runtime Guard (forbidden calls raise).
+        A booby-trapped agent binary sits next to its package.json; it must never run,
+        and outside the scanned tree the only files opened are package.json files."""
+        root = os.path.join(self.fx.base, "prefix")
+        pkg = os.path.join(root, "lib", "node_modules", "@anthropic-ai", "claude-code")
+        write_file(os.path.join(pkg, "package.json"), '{"name": "@anthropic-ai/claude-code", "version": "2.1.252"}')
+        trap = os.path.join(pkg, "cli.js")
+        write_file(trap, "require('fs').writeFileSync(%r, 'ran')\n" % self.fx.sentinel)
+        bindir = os.path.join(root, "bin")
+        write_file(os.path.join(bindir, "claude"), "#!/bin/sh\ntouch %s\n" % cfg_quote(self.fx.sentinel))
+        os.chmod(os.path.join(bindir, "claude"), 0o755)
+        make_gitdir(os.path.join(self.fx.tree, ".git"), "[core]\n\tbare = false\n")
+        rs = load_ruleset()
+        env = {"npm_config_prefix": root, "PATH": bindir}
+        with Guard() as guard:
+            pre = run_preflight(self.fx.tree, rs, self.data, ceiling=self.fx.base, environ=env, detect=True)
+            text = render_preflight(pre)
+        self.assertFalse(self.fx.sentinel_exists)
+        self.assertIn("2.1.252", text)
+        tree = os.path.normcase(os.path.realpath(self.fx.tree))
+        outside_tree = [p for p in guard.opened
+                        if not os.path.normcase(os.path.realpath(p)).startswith(tree)
+                        and not p.startswith(os.path.dirname(agents.DEFAULT_PATH))
+                        and p != "/proc/self/mountinfo"]  # read once per process for the pseudo-fs check
+        self.assertTrue(outside_tree)
+        self.assertTrue(all(os.path.basename(p) == "package.json" for p in outside_tree), outside_tree)
 
     def test_ignores_wrong_name_bad_json_and_non_string_version(self):
         root = os.path.join(self.fx.base, "prefix")

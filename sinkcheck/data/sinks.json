@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "ruleset_version": 1,
-  "ruleset_date": "2026-10-27",
+  "ruleset_version": 2,
+  "ruleset_date": "2026-10-29",
   "description": "Git configuration keys that can cause command execution. This file is data: adding a sink is a data change. Evidence 'origin' ids resolve in 'origins'. A rule backed by fewer than two independent origins is reported as single-source or unverified; the engine computes this, it is never hand-set. The list is not exhaustive and git's maintainers have said an exhaustive list is not achievable.",
   "matchers": {
     "command_string": "Any non-empty value is a command or path git may execute.",
@@ -69,6 +69,10 @@
     "git-protected-config-commit": {
       "title": "git.git commit: define protected configuration",
       "url": "https://github.com/git/git/commit/779ea9303a7de3d618f3b0e329ebb89529ab3285"
+    },
+    "cve-2026-19593": {
+      "title": "CVE-2026-19593: Codex Desktop ran a filter driver selected through attr.tree in an untrusted repository's config",
+      "url": "https://www.cve.org/CVERecord?id=CVE-2026-19593"
     }
   },
   "hooks_evidence": [
@@ -306,7 +310,7 @@
       "attribute": "filter",
       "sweep": [],
       "protections": "none",
-      "triggers": "Runs when git adds or diffs a path whose attributes name this filter driver. The attributes can come from a .gitattributes file in the same untrusted tree.",
+      "triggers": "Runs when git adds, diffs, or compares content for status on a path whose attributes name this filter driver. The attributes can come from a .gitattributes file in the same untrusted tree, .git/info/attributes, a file named by core.attributesFile, or a tree named by attr.tree.",
       "reached_by": [
         "add",
         "diff",
@@ -378,6 +382,47 @@
         "git-lfs filter-process",
         "git-lfs filter-process --skip"
       ]
+    },
+    {
+      "id": "attr.tree",
+      "key": "attr.tree",
+      "tier": "C",
+      "match": "any_value",
+      "severity": "review",
+      "sweep": [],
+      "protections": "none",
+      "triggers": "Reads gitattributes from a tree object named in config instead of the working tree, so it can select a filter, diff or merge driver for any path without a .gitattributes file. sinkcheck does not read git objects, so the attributes this tree carries are not known.",
+      "reached_by": [
+        "add",
+        "diff",
+        "status (content comparison)",
+        "checkout"
+      ],
+      "evidence": [
+        {
+          "origin": "cve-2026-19593",
+          "note": "attr.tree plus a configured clean or process filter ran an attacker program when Codex Desktop inspected a workspace."
+        }
+      ]
+    },
+    {
+      "id": "core.attributesfile",
+      "key": "core.attributesFile",
+      "tier": "C",
+      "match": "any_value",
+      "severity": "review",
+      "sweep": [
+        "attributesfile"
+      ],
+      "protections": "none",
+      "triggers": "Names an extra gitattributes file. Set in repository config, it can select a filter, diff or merge driver for any path from a file outside the usual places. A file inside the target is read and paired with drivers; one outside it is not read.",
+      "reached_by": [
+        "add",
+        "diff",
+        "status (content comparison)",
+        "checkout"
+      ],
+      "evidence": []
     },
     {
       "id": "diff.textconv",

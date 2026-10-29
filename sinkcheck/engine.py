@@ -41,7 +41,8 @@ CLIP = 120
 # verdict, plus anything a cap or an unreadable directory cut short.
 NOT_EXAMINED = [
     "the contents of hook files (only their presence and names are reported)",
-    "attribute files outside the target (core.attributesFile, global and system)",
+    "attribute files outside the target (a core.attributesFile that points outside it, global and system)",
+    "the tree object named by attr.tree (git objects are not read, so the attributes it carries are not known)",
     "conditions of includeIf (every conditional include is followed and flagged, none is evaluated)",
     "submodules that are not present in the target",
 ]
@@ -228,6 +229,8 @@ def _apply_rules(entries, path, ruleset, result, via="", only_prefix=None, scope
                 )
             if force_review and severity == "critical":
                 severity = "review"
+            if rule.id == "core.attributesfile" and scope == "repo":
+                notes.append(_follow_attributes_file(e.value, result))
             result.add(
                 Finding(
                     severity,
@@ -462,6 +465,25 @@ def _collect_attributes(path, result, label):
     result.count(label)
 
 
+def _follow_attributes_file(value, result):
+    """core.attributesFile set in repository config. git opens a relative value
+    from the top of the work tree; this reads it only when it resolves inside the
+    scanned target. Returns a note for the finding."""
+    if not value:
+        return "empty value; nothing to read"
+    if value.startswith("~"):
+        return "names a file under a home directory, outside the target; it was not read, so drivers it selects are unknown"
+    root = result.current_root or result.target
+    path = _resolve_from(root, value)
+    if not _inside(path, root):
+        return "names a file outside the target; it was not read, so drivers it selects are unknown"
+    if _refused(result, path, "core.attributesFile target"):
+        return "the named file was refused; not read"
+    _collect_attributes(path, result, "core.attributesFile file(s) inside the target")
+    return ("names a file inside the target, which was read and paired with drivers "
+            "(resolved from the target root, as git does when run from the top of the work tree)")
+
+
 def _list_dir(path, cap, result, what):
     """Bounded, sorted listing. Returns entries or None (with a finding)."""
     try:
@@ -658,6 +680,8 @@ def _pair_attributes(result):
     by = {}
     for ref in result.attr_refs:
         by.setdefault((ref.attr, ref.driver), []).append(ref)
+    attr_tree = any(f.kind == "sink" and f.rule is not None and f.rule.id == "attr.tree" and f.severity != "info"
+                    for f in result.findings)
     for f in result.findings:
         if f.kind != "sink" or f.rule is None or not f.rule.attribute or not f.driver:
             continue
@@ -670,6 +694,9 @@ def _pair_attributes(result):
         else:
             f.note = "; ".join(n for n in (f.note, "no %s= attribute selecting this driver was found in the attribute files examined; "
                                             "one outside the examined set could still select it" % f.rule.attribute) if n)
+            if attr_tree:
+                f.note += ("; attr.tree is set in this configuration, and the tree it names was not read, "
+                           "so it may be what selects this driver")
 
 
 def require_directory(target):
