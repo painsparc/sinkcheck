@@ -1,0 +1,1041 @@
+{
+  "schema_version": 1,
+  "ruleset_version": 1,
+  "ruleset_date": "2026-10-27",
+  "description": "Git configuration keys that can cause command execution. This file is data: adding a sink is a data change. Evidence 'origin' ids resolve in 'origins'. A rule backed by fewer than two independent origins is reported as single-source or unverified; the engine computes this, it is never hand-set. The list is not exhaustive and git's maintainers have said an exhaustive list is not achievable.",
+  "matchers": {
+    "command_string": "Any non-empty value is a command or path git may execute.",
+    "bool_or_command": "Git boolean words and plain integers are not commands; any other value is treated as a command.",
+    "bang_prefix": "Only a value starting with '!' runs a shell command.",
+    "ext_url": "Only a value starting with 'ext::' runs a command.",
+    "value_in": "Only the values listed in hit_values are hits.",
+    "any_value": "Presence of the key is the finding.",
+    "include": "Structural: pulls in another file. Followed by the engine where supported."
+  },
+  "protections": {
+    "none": {
+      "safe_directory": "Does not apply. It rejects repositories owned by a different user; an unpacked archive is owned by you.",
+      "protocol": "Does not apply. protocol.*.allow governs transport protocols only.",
+      "note": "Git has no switch that disables repo-local execution settings in a repository you own."
+    },
+    "protocol_ext": {
+      "safe_directory": "Does not apply.",
+      "protocol": "Relevant to ext:: transports only; protocol.ext.allow is itself readable from repo-local config.",
+      "note": ""
+    },
+    "protected_scope": {
+      "safe_directory": "Not the relevant control.",
+      "protocol": "Not the relevant control.",
+      "note": "Git ignores this variable when it is read from repo-local config (protected-configuration-only). Reported for completeness."
+    }
+  },
+  "origins": {
+    "justinsteven-2022": {
+      "title": "Steven, buried bare repos and core.fsmonitor abuses (2022)",
+      "url": "https://github.com/justinsteven/advisories/blob/main/2022_git_buried_bare_repos_and_fsmonitor_various_abuses.md"
+    },
+    "cisco-talos-2025-2243": {
+      "title": "Cisco Talos TALOS-2025-2243",
+      "url": "https://talosintelligence.com/vulnerability_reports/TALOS-2025-2243"
+    },
+    "github-copilot-cli-advisory": {
+      "title": "Copilot CLI advisory GHSA-9ccr-r5hg-74gf",
+      "url": "https://github.com/github/copilot-cli/security/advisories/GHSA-9ccr-r5hg-74gf"
+    },
+    "bound-agents-issue-171": {
+      "title": "bound-agents issue 171 (git exec-surface paths)",
+      "url": "https://github.com/bound-agents/bound/issues/171"
+    },
+    "gitpython-safe-mode": {
+      "title": "GitPython safe-mode commit",
+      "url": "https://github.com/gitpython-developers/GitPython/commit/07a3889700c97291346a114305c4e5f0c1a557b4"
+    },
+    "eqms-ai-workbench-1.10.0": {
+      "title": "ai-workbench v1.10.0 release notes",
+      "url": "https://github.com/eqms/ai-workbench/releases/tag/v1.10.0"
+    },
+    "code-context-mcp-251": {
+      "title": "code-context-mcp issue 251",
+      "url": "https://github.com/VelimirMueller/code-context-mcp/issues/251"
+    },
+    "cymulate-claude-code": {
+      "title": "Cymulate, headless Claude Code git config execution",
+      "url": "https://cymulate.com/blog/headless-claude-code-git-config-command-execution/"
+    },
+    "hermes-agent-changelog": {
+      "title": "Hermes Agent changelog (v0.21.6 filter hardening)",
+      "url": "https://www.gradually.ai/en/changelogs/hermes-agent/"
+    },
+    "git-protected-config-commit": {
+      "title": "git.git commit: define protected configuration",
+      "url": "https://github.com/git/git/commit/779ea9303a7de3d618f3b0e329ebb89529ab3285"
+    }
+  },
+  "hooks_evidence": [
+    {
+      "origin": "justinsteven-2022",
+      "note": "Hooks run only on specific operations and, where the filesystem has an executable bit, only when set; the advisory calls them less ideal than core.fsmonitor for exploitation."
+    }
+  ],
+  "hooks": {
+    "applypatch-msg": "git am",
+    "pre-applypatch": "git am",
+    "post-applypatch": "git am",
+    "pre-commit": "commit",
+    "pre-merge-commit": "merge",
+    "prepare-commit-msg": "commit",
+    "commit-msg": "commit",
+    "post-commit": "commit",
+    "pre-rebase": "rebase",
+    "post-checkout": "checkout, switch, clone, worktree add",
+    "post-merge": "merge, pull",
+    "pre-push": "push",
+    "pre-receive": "receive-pack",
+    "update": "receive-pack",
+    "proc-receive": "receive-pack",
+    "post-receive": "receive-pack",
+    "post-update": "receive-pack",
+    "reference-transaction": "any ref update",
+    "push-to-checkout": "receive-pack",
+    "pre-auto-gc": "gc --auto",
+    "post-rewrite": "commit --amend, rebase",
+    "sendemail-validate": "send-email",
+    "fsmonitor-watchman": "index refresh, when core.fsmonitor names it",
+    "post-index-change": "whenever the index file is written (may include routine refreshes)",
+    "p4-changelist": "git-p4",
+    "p4-prepare-changelist": "git-p4",
+    "p4-post-changelist": "git-p4",
+    "p4-pre-submit": "git-p4"
+  },
+  "environment": [
+    {
+      "name": "GIT_DIR",
+      "severity": "review",
+      "effect": "Overrides repository discovery: git uses this directory instead of the target's repository."
+    },
+    {
+      "name": "GIT_WORK_TREE",
+      "severity": "review",
+      "effect": "Overrides the work tree git uses."
+    },
+    {
+      "name": "GIT_COMMON_DIR",
+      "severity": "review",
+      "effect": "Overrides the shared git directory (config, hooks)."
+    },
+    {
+      "name": "GIT_EXEC_PATH",
+      "severity": "review",
+      "effect": "Directory git loads its sub-programs from."
+    },
+    {
+      "name": "GIT_CONFIG_COUNT",
+      "severity": "review",
+      "effect": "Injects command-line-scope config entries; highest precedence. Values are not shown."
+    },
+    {
+      "name": "GIT_CONFIG_PARAMETERS",
+      "severity": "review",
+      "effect": "Injects command-line-scope config entries. Value not shown."
+    },
+    {
+      "name": "GIT_EXTERNAL_DIFF",
+      "severity": "review",
+      "effect": "External diff program."
+    },
+    {
+      "name": "GIT_CONFIG",
+      "severity": "info",
+      "effect": "Alternate config source for the git config command."
+    },
+    {
+      "name": "GIT_CONFIG_GLOBAL",
+      "severity": "info",
+      "effect": "Replaces the global config file."
+    },
+    {
+      "name": "GIT_CONFIG_SYSTEM",
+      "severity": "info",
+      "effect": "Replaces the system config file."
+    },
+    {
+      "name": "GIT_CONFIG_NOSYSTEM",
+      "severity": "info",
+      "effect": "Disables the system config file."
+    },
+    {
+      "name": "GIT_SSH",
+      "severity": "info",
+      "effect": "Program used for ssh transports."
+    },
+    {
+      "name": "GIT_SSH_COMMAND",
+      "severity": "info",
+      "effect": "Command used for ssh transports."
+    },
+    {
+      "name": "GIT_PROXY_COMMAND",
+      "severity": "info",
+      "effect": "Command used for git:// connections."
+    },
+    {
+      "name": "GIT_ASKPASS",
+      "severity": "info",
+      "effect": "Program used to ask for credentials."
+    },
+    {
+      "name": "GIT_PAGER",
+      "severity": "info",
+      "effect": "Pager command."
+    },
+    {
+      "name": "GIT_EDITOR",
+      "severity": "info",
+      "effect": "Editor command."
+    },
+    {
+      "name": "GIT_TEMPLATE_DIR",
+      "severity": "info",
+      "effect": "Template directory (may carry hooks into new repositories)."
+    },
+    {
+      "name": "GIT_CEILING_DIRECTORIES",
+      "severity": "info",
+      "effect": "Limits how far git searches upward for a repository. This scan ignores it unless --ceiling is given."
+    }
+  ],
+  "sinks": [
+    {
+      "id": "core.fsmonitor",
+      "key": "core.fsmonitor",
+      "tier": "A",
+      "match": "bool_or_command",
+      "severity": "critical",
+      "safe_values": [
+        "false",
+        "no",
+        "off",
+        ""
+      ],
+      "sweep": [
+        "fsmonitor"
+      ],
+      "protections": "none",
+      "triggers": "Git runs the named command whenever it refreshes the index, to learn which files changed. It fires even when the pathspec given does not exist.",
+      "reached_by": [
+        "status",
+        "diff",
+        "add",
+        "commit",
+        "checkout",
+        "rm --cached",
+        "ls-files",
+        "any index refresh"
+      ],
+      "evidence": [
+        {
+          "origin": "justinsteven-2022",
+          "note": "Documents the trigger and the list of operations."
+        },
+        {
+          "origin": "cisco-talos-2025-2243",
+          "note": "Independent report of the same mechanism in a scanner tool."
+        },
+        {
+          "origin": "github-copilot-cli-advisory",
+          "note": "Agent-specific advisory."
+        },
+        {
+          "origin": "cymulate-claude-code",
+          "note": "Agent-specific finding."
+        },
+        {
+          "origin": "code-context-mcp-251",
+          "note": "Notes it fires on ls-files and that safe.directory does not help."
+        }
+      ]
+    },
+    {
+      "id": "core.hookspath",
+      "key": "core.hooksPath",
+      "tier": "A",
+      "match": "command_string",
+      "severity": "critical",
+      "safe_values": [
+        "/dev/null",
+        "nul"
+      ],
+      "sweep": [
+        "hookspath"
+      ],
+      "protections": "none",
+      "triggers": "Redirects hook lookup to any directory, so hooks need not live inside .git/hooks. Executable files there run on hook-firing operations.",
+      "reached_by": [
+        "commit",
+        "checkout",
+        "merge",
+        "rebase",
+        "push",
+        "other hook-firing operations"
+      ],
+      "evidence": [
+        {
+          "origin": "github-copilot-cli-advisory",
+          "note": "Named as an executable config key."
+        },
+        {
+          "origin": "bound-agents-issue-171",
+          "note": "Listed among exec-surface directives."
+        },
+        {
+          "origin": "gitpython-safe-mode",
+          "note": "Overridden in GitPython's safe mode."
+        },
+        {
+          "origin": "code-context-mcp-251",
+          "note": "Overridden on every git call."
+        }
+      ]
+    },
+    {
+      "id": "filter.clean",
+      "key": "filter.*.clean",
+      "tier": "A",
+      "match": "command_string",
+      "severity": "critical",
+      "attribute": "filter",
+      "sweep": [],
+      "protections": "none",
+      "triggers": "Runs when git adds or diffs a path whose attributes name this filter driver. The attributes can come from a .gitattributes file in the same untrusted tree.",
+      "reached_by": [
+        "add",
+        "diff",
+        "status (content comparison)",
+        "commit"
+      ],
+      "evidence": [
+        {
+          "origin": "hermes-agent-changelog",
+          "note": "Hermes fixed automatic git calls running clean/smudge/process filters from an untrusted repo's config before the first prompt."
+        }
+      ],
+      "host_benign_values": [
+        "git-lfs clean -- %f"
+      ]
+    },
+    {
+      "id": "filter.smudge",
+      "key": "filter.*.smudge",
+      "tier": "A",
+      "match": "command_string",
+      "severity": "critical",
+      "attribute": "filter",
+      "sweep": [
+        "smudge"
+      ],
+      "protections": "none",
+      "triggers": "Runs when git checks out a path whose attributes name this filter driver.",
+      "reached_by": [
+        "checkout",
+        "switch",
+        "restore",
+        "clone",
+        "worktree add"
+      ],
+      "evidence": [
+        {
+          "origin": "hermes-agent-changelog",
+          "note": "Same Hermes finding as filter.clean."
+        }
+      ],
+      "host_benign_values": [
+        "git-lfs smudge -- %f",
+        "git-lfs smudge --skip -- %f"
+      ]
+    },
+    {
+      "id": "filter.process",
+      "key": "filter.*.process",
+      "tier": "A",
+      "match": "command_string",
+      "severity": "critical",
+      "attribute": "filter",
+      "sweep": [],
+      "protections": "none",
+      "triggers": "Long-running filter process started for paths whose attributes name this driver.",
+      "reached_by": [
+        "add",
+        "checkout",
+        "diff"
+      ],
+      "evidence": [
+        {
+          "origin": "hermes-agent-changelog",
+          "note": "Named alongside clean and smudge."
+        }
+      ],
+      "host_benign_values": [
+        "git-lfs filter-process",
+        "git-lfs filter-process --skip"
+      ]
+    },
+    {
+      "id": "diff.textconv",
+      "key": "diff.*.textconv",
+      "tier": "A",
+      "match": "command_string",
+      "severity": "critical",
+      "attribute": "diff",
+      "sweep": [
+        "textconv"
+      ],
+      "protections": "none",
+      "triggers": "Converts file content before diffing for paths whose attributes name this driver.",
+      "reached_by": [
+        "diff",
+        "log -p",
+        "show",
+        "blame"
+      ],
+      "evidence": [
+        {
+          "origin": "justinsteven-2022",
+          "note": "Quotes a git maintainer listing external diff, textconv and ssh commands."
+        },
+        {
+          "origin": "code-context-mcp-251",
+          "note": "Mitigates with --no-textconv on diff calls."
+        }
+      ],
+      "host_benign_values": [
+        "astextplain"
+      ]
+    },
+    {
+      "id": "diff.external",
+      "key": "diff.external",
+      "tier": "A",
+      "match": "command_string",
+      "severity": "critical",
+      "sweep": [],
+      "protections": "none",
+      "triggers": "Replaces git's internal diff with the named program.",
+      "reached_by": [
+        "diff",
+        "log -p",
+        "show"
+      ],
+      "evidence": [
+        {
+          "origin": "justinsteven-2022",
+          "note": "Named as a command-bearing option."
+        },
+        {
+          "origin": "github-copilot-cli-advisory",
+          "note": "Named as an executable config key."
+        },
+        {
+          "origin": "code-context-mcp-251",
+          "note": "Mitigates with --no-ext-diff."
+        }
+      ]
+    },
+    {
+      "id": "diff.command",
+      "key": "diff.*.command",
+      "tier": "A",
+      "match": "command_string",
+      "severity": "critical",
+      "attribute": "diff",
+      "sweep": [],
+      "protections": "none",
+      "triggers": "External diff driver command for paths whose attributes name this driver.",
+      "reached_by": [
+        "diff"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "core.pager",
+      "key": "core.pager",
+      "tier": "A",
+      "match": "command_string",
+      "severity": "review",
+      "safe_values": [
+        "cat",
+        "less",
+        "less -r",
+        "less -frx",
+        "more"
+      ],
+      "sweep": [],
+      "protections": "none",
+      "triggers": "Command that output is piped through. Git normally pages only when stdout is a terminal; a harness that allocates a pty can trigger it.",
+      "reached_by": [
+        "log",
+        "diff",
+        "show",
+        "fsck",
+        "other paged commands on a terminal"
+      ],
+      "evidence": [
+        {
+          "origin": "justinsteven-2022",
+          "note": "Quotes the pager.log / pager.fsck scenario."
+        },
+        {
+          "origin": "bound-agents-issue-171",
+          "note": "Listed among exec-surface directives."
+        },
+        {
+          "origin": "eqms-ai-workbench-1.10.0",
+          "note": "Pins core.pager=cat on its git calls."
+        }
+      ]
+    },
+    {
+      "id": "pager.cmd",
+      "key": "pager.*",
+      "tier": "A",
+      "match": "bool_or_command",
+      "severity": "review",
+      "safe_values": [
+        "cat",
+        "less",
+        "less -r",
+        "less -frx",
+        "more",
+        "false",
+        "no",
+        "off",
+        ""
+      ],
+      "sweep": [],
+      "protections": "none",
+      "triggers": "Per-command pager. Same terminal condition as core.pager.",
+      "reached_by": [
+        "the named git subcommand, when output is a terminal"
+      ],
+      "evidence": [
+        {
+          "origin": "justinsteven-2022",
+          "note": "Quotes the pager.log / pager.fsck scenario."
+        }
+      ]
+    },
+    {
+      "id": "core.sshcommand",
+      "key": "core.sshCommand",
+      "tier": "B",
+      "match": "command_string",
+      "severity": "review",
+      "sweep": [
+        "sshcommand"
+      ],
+      "protections": "none",
+      "triggers": "Command used instead of ssh for ssh transports. Also set legitimately for deploy keys, hence review rather than critical.",
+      "reached_by": [
+        "fetch",
+        "pull",
+        "push",
+        "clone over ssh",
+        "ls-remote"
+      ],
+      "evidence": [
+        {
+          "origin": "justinsteven-2022",
+          "note": "Named as a command-bearing option."
+        },
+        {
+          "origin": "bound-agents-issue-171",
+          "note": "Listed among exec-surface directives."
+        },
+        {
+          "origin": "gitpython-safe-mode",
+          "note": "Overridden in safe mode."
+        },
+        {
+          "origin": "eqms-ai-workbench-1.10.0",
+          "note": "Pinned on its git calls."
+        }
+      ]
+    },
+    {
+      "id": "core.gitproxy",
+      "key": "core.gitProxy",
+      "tier": "B",
+      "match": "command_string",
+      "severity": "review",
+      "sweep": [
+        "gitproxy"
+      ],
+      "protections": "none",
+      "triggers": "Command run to connect to remotes over the git protocol.",
+      "reached_by": [
+        "fetch",
+        "pull",
+        "push over git://"
+      ],
+      "evidence": [
+        {
+          "origin": "justinsteven-2022",
+          "note": "Named as a command-bearing option."
+        },
+        {
+          "origin": "eqms-ai-workbench-1.10.0",
+          "note": "Pinned on its git calls."
+        }
+      ]
+    },
+    {
+      "id": "core.askpass",
+      "key": "core.askPass",
+      "tier": "B",
+      "match": "command_string",
+      "severity": "review",
+      "sweep": [
+        "askpass"
+      ],
+      "protections": "none",
+      "triggers": "Program run to prompt for credentials.",
+      "reached_by": [
+        "fetch",
+        "pull",
+        "push over authenticated transports"
+      ],
+      "evidence": [
+        {
+          "origin": "gitpython-safe-mode",
+          "note": "Overridden in safe mode."
+        }
+      ]
+    },
+    {
+      "id": "credential.helper",
+      "key": "credential.helper",
+      "tier": "B",
+      "match": "command_string",
+      "severity": "review",
+      "multivalued": true,
+      "sweep": [],
+      "protections": "none",
+      "triggers": "Helper program (or '!' shell command) consulted for credentials.",
+      "reached_by": [
+        "fetch",
+        "pull",
+        "push",
+        "credential-using commands"
+      ],
+      "evidence": [
+        {
+          "origin": "gitpython-safe-mode",
+          "note": "Overridden in safe mode."
+        }
+      ]
+    },
+    {
+      "id": "credential.url.helper",
+      "key": "credential.*.helper",
+      "tier": "B",
+      "match": "command_string",
+      "severity": "review",
+      "multivalued": true,
+      "sweep": [],
+      "protections": "none",
+      "triggers": "URL-scoped credential helper.",
+      "reached_by": [
+        "fetch",
+        "pull",
+        "push to the matching URL"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "core.editor",
+      "key": "core.editor",
+      "tier": "B",
+      "match": "command_string",
+      "severity": "review",
+      "sweep": [],
+      "protections": "none",
+      "triggers": "Editor launched for commit messages and similar prompts.",
+      "reached_by": [
+        "commit without -m",
+        "rebase -i",
+        "tag -a without -m"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "sequence.editor",
+      "key": "sequence.editor",
+      "tier": "B",
+      "match": "command_string",
+      "severity": "review",
+      "sweep": [],
+      "protections": "none",
+      "triggers": "Editor launched for rebase todo lists.",
+      "reached_by": [
+        "rebase -i"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "gpg.program",
+      "key": "gpg.program",
+      "tier": "B",
+      "match": "command_string",
+      "severity": "review",
+      "sweep": [],
+      "protections": "none",
+      "triggers": "Program used for signing and verification.",
+      "reached_by": [
+        "signed commit or tag creation",
+        "verify-commit",
+        "log --show-signature"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "gpg.format.program",
+      "key": "gpg.*.program",
+      "tier": "B",
+      "match": "command_string",
+      "severity": "review",
+      "sweep": [],
+      "protections": "none",
+      "triggers": "Format-specific signing program.",
+      "reached_by": [
+        "signed commit or tag creation",
+        "verification"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "gpg.ssh.defaultkeycommand",
+      "key": "gpg.ssh.defaultKeyCommand",
+      "tier": "B",
+      "match": "command_string",
+      "severity": "review",
+      "sweep": [],
+      "protections": "none",
+      "triggers": "Command run to find a default ssh signing key.",
+      "reached_by": [
+        "ssh-signed commit or tag creation"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "merge.driver",
+      "key": "merge.*.driver",
+      "tier": "B",
+      "match": "command_string",
+      "severity": "review",
+      "attribute": "merge",
+      "sweep": [],
+      "protections": "none",
+      "triggers": "Custom merge driver for paths whose attributes name it.",
+      "reached_by": [
+        "merge",
+        "pull",
+        "rebase",
+        "cherry-pick"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "mergetool.cmd",
+      "key": "mergetool.*.cmd",
+      "tier": "B",
+      "match": "command_string",
+      "severity": "review",
+      "sweep": [],
+      "protections": "none",
+      "triggers": "Command for a named merge tool.",
+      "reached_by": [
+        "mergetool"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "difftool.cmd",
+      "key": "difftool.*.cmd",
+      "tier": "B",
+      "match": "command_string",
+      "severity": "review",
+      "sweep": [],
+      "protections": "none",
+      "triggers": "Command for a named diff tool.",
+      "reached_by": [
+        "difftool"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "alias.shell",
+      "key": "alias.*",
+      "tier": "B",
+      "match": "bang_prefix",
+      "severity": "review",
+      "sweep": [],
+      "protections": "none",
+      "triggers": "An alias whose value starts with '!' runs a shell command when invoked by name.",
+      "reached_by": [
+        "git <alias-name>"
+      ],
+      "evidence": [
+        {
+          "origin": "bound-agents-issue-171",
+          "note": "alias.* = \"!cmd\" listed among exec-surface directives."
+        }
+      ]
+    },
+    {
+      "id": "remote.url.ext",
+      "key": "remote.*.url",
+      "tier": "B",
+      "match": "ext_url",
+      "severity": "review",
+      "sweep": [],
+      "protections": "protocol_ext",
+      "triggers": "An ext:: remote URL runs a command to reach the remote.",
+      "reached_by": [
+        "fetch",
+        "pull",
+        "push",
+        "ls-remote"
+      ],
+      "evidence": [
+        {
+          "origin": "eqms-ai-workbench-1.10.0",
+          "note": "Reports remote.<n>.url = ext::sh -c ... as a command-execution vector."
+        }
+      ]
+    },
+    {
+      "id": "remote.pushurl.ext",
+      "key": "remote.*.pushurl",
+      "tier": "B",
+      "match": "ext_url",
+      "severity": "review",
+      "sweep": [],
+      "protections": "protocol_ext",
+      "triggers": "An ext:: push URL runs a command to reach the remote.",
+      "reached_by": [
+        "push"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "protocol.ext.allow",
+      "key": "protocol.ext.allow",
+      "tier": "B",
+      "match": "value_in",
+      "hit_values": [
+        "always",
+        "user"
+      ],
+      "severity": "review",
+      "sweep": [],
+      "protections": "protocol_ext",
+      "triggers": "Enables the ext:: transport that remote URLs can use to run commands.",
+      "reached_by": [
+        "fetch",
+        "pull",
+        "push when an ext:: remote exists"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "core.alternaterefscommand",
+      "key": "core.alternateRefsCommand",
+      "tier": "B",
+      "match": "command_string",
+      "severity": "review",
+      "sweep": [
+        "alternaterefscommand"
+      ],
+      "protections": "none",
+      "triggers": "Command run to list refs of alternate object stores.",
+      "reached_by": [
+        "operations that advertise alternate refs"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "init.templatedir",
+      "key": "init.templateDir",
+      "tier": "B",
+      "match": "any_value",
+      "severity": "review",
+      "sweep": [
+        "templatedir"
+      ],
+      "protections": "none",
+      "triggers": "Template directory copied into new repositories, including hooks, on init and clone.",
+      "reached_by": [
+        "init",
+        "clone"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "submodule.url.ext",
+      "key": "submodule.*.url",
+      "tier": "B",
+      "match": "ext_url",
+      "severity": "review",
+      "sweep": [],
+      "protections": "protocol_ext",
+      "triggers": "An ext:: submodule URL runs a command to reach the submodule remote.",
+      "reached_by": [
+        "submodule update",
+        "clone --recurse-submodules"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "submodule.update",
+      "key": "submodule.*.update",
+      "tier": "B",
+      "match": "bang_prefix",
+      "severity": "review",
+      "sweep": [],
+      "protections": "none",
+      "triggers": "A '!' value runs a shell command in place of the normal submodule update.",
+      "reached_by": [
+        "submodule update"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "core.worktree",
+      "key": "core.worktree",
+      "tier": "C",
+      "match": "any_value",
+      "severity": "review",
+      "sweep": [],
+      "protections": "none",
+      "triggers": "Points a git directory at an arbitrary work tree. Combined with bare=false it lets a bare-layout directory behave as a normal repository, the trick behind buried bare repository payloads.",
+      "reached_by": [
+        "any command run from inside the directory"
+      ],
+      "evidence": [
+        {
+          "origin": "justinsteven-2022",
+          "note": "Uses core.worktree plus core.bare=false to make an embedded bare repo accept git status."
+        }
+      ]
+    },
+    {
+      "id": "uploadpack.packobjectshook",
+      "key": "uploadpack.packObjectsHook",
+      "tier": "B",
+      "match": "command_string",
+      "severity": "review",
+      "protected_only": true,
+      "sweep": [
+        "packobjectshook"
+      ],
+      "protections": "protected_scope",
+      "triggers": "Hook run by upload-pack when packing objects.",
+      "reached_by": [
+        "upload-pack"
+      ],
+      "evidence": [
+        {
+          "origin": "git-protected-config-commit",
+          "note": "Defines it as the protected-configuration-only variable."
+        }
+      ]
+    },
+    {
+      "id": "safe.directory",
+      "key": "safe.directory",
+      "tier": "C",
+      "match": "any_value",
+      "severity": "review",
+      "protected_only": true,
+      "host_severity": "info",
+      "sweep": [],
+      "protections": "protected_scope",
+      "triggers": "Ownership-check override. Not an execution sink; a repo-local value is ignored by git.",
+      "reached_by": [],
+      "evidence": [
+        {
+          "origin": "git-protected-config-commit",
+          "note": "Protected-configuration treatment of safe.directory."
+        }
+      ]
+    },
+    {
+      "id": "safe.directory.star",
+      "key": "safe.directory",
+      "tier": "C",
+      "match": "value_in",
+      "hit_values": [
+        "*"
+      ],
+      "severity": "review",
+      "protected_only": true,
+      "host_severity": "review",
+      "sweep": [],
+      "protections": "protected_scope",
+      "triggers": "A wildcard safe.directory disables git's ownership check for every repository. Only honoured from system, global or command-line config.",
+      "reached_by": [],
+      "evidence": [
+        {
+          "origin": "git-protected-config-commit",
+          "note": "safe.directory is a protected-configuration-only variable."
+        }
+      ]
+    },
+    {
+      "id": "safe.barerepository",
+      "key": "safe.bareRepository",
+      "tier": "C",
+      "match": "any_value",
+      "severity": "review",
+      "protected_only": true,
+      "host_severity": "info",
+      "sweep": [],
+      "protections": "protected_scope",
+      "triggers": "Controls discovery of bare repositories. Not an execution sink; a repo-local value is ignored by git.",
+      "reached_by": [],
+      "evidence": [
+        {
+          "origin": "git-protected-config-commit",
+          "note": "Protected-configuration treatment of safe.bareRepository."
+        }
+      ]
+    },
+    {
+      "id": "include.path",
+      "key": "include.path",
+      "tier": "C",
+      "match": "include",
+      "severity": "review",
+      "sweep": [],
+      "protections": "none",
+      "triggers": "Pulls another file into the configuration, so a clean-looking config can carry its payload elsewhere.",
+      "reached_by": [
+        "every config read"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "includeif.path",
+      "key": "includeIf.*.path",
+      "tier": "C",
+      "match": "include",
+      "severity": "review",
+      "sweep": [],
+      "protections": "none",
+      "triggers": "Conditional include; the condition decides at read time whether the file is pulled in.",
+      "reached_by": [
+        "every config read when the condition holds"
+      ],
+      "evidence": []
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  gate-and-suite:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.9", "3.12"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      # The detonation gate runs first and alone. If the sentinel ever appears, nothing else matters.
+      - name: Detonation gate, then the full suite
+        run: python tools/run_gate.py
+      - name: Self-scan (fails only on a critical finding)
+        run: python -m sinkcheck scan . --fail-on critical

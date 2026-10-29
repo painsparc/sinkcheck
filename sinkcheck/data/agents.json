@@ -1,0 +1,177 @@
+{
+  "schema_version": 1,
+  "data_version": 1,
+  "data_date": "2026-10-27",
+  "stale_after_days": 30,
+  "note": "Per-agent status is a dated snapshot and is mostly single-sourced: nearly all coverage after 1 September 2026 derives from one disclosure. Every row says so. Verify with your vendor.",
+  "origins": {
+    "manifold-disclosure": {
+      "title": "Manifold Security GitSpawn disclosure and 1 September 2026 retest, as reported by The Hacker News (2 Sep 2026). Later roundups repeat this table and are not counted as separate sources.",
+      "url": "https://thehackernews.com/2026/09/malicious-git-configs-can-make-claude.html"
+    },
+    "claude-code-changelog": {
+      "title": "Claude Code changelog v2.1.310 (23 Oct 2026), via a third-party mirror. Triage notes that quote the same changelog are the same origin.",
+      "url": "https://claudelog.com/claude-code-changelog/"
+    },
+    "hermes-agent-changelog": {
+      "title": "Hermes Agent changelog (v0.21.6 filter hardening, v0.22.x)",
+      "url": "https://www.gradually.ai/en/changelogs/hermes-agent/"
+    }
+  },
+  "agents": [
+    {
+      "id": "claude-code",
+      "name": "Claude Code",
+      "detect": {"npm_packages": ["@anthropic-ai/claude-code"]},
+      "findings": [
+        {
+          "id": "claude-code-fsmonitor",
+          "path": "core.fsmonitor read by git status / git diff probes",
+          "sinks": ["core.fsmonitor"],
+          "status": "fixed",
+          "fixed_in": "2.1.196",
+          "last_vulnerable": "2.1.193",
+          "status_date": "2026-09-01",
+          "detail": "Confirmed vulnerable on 2.1.193; fixed by 2.1.196 per the 1 September retest.",
+          "caveat": "",
+          "gate": false,
+          "evidence": [{"origin": "manifold-disclosure", "note": "patch table and retest"}]
+        },
+        {
+          "id": "claude-code-ultrareview",
+          "path": "claude ultrareview (a different git configuration key; the key was withheld by the researchers)",
+          "sinks": [],
+          "status": "fixed",
+          "fixed_in": "2.1.310",
+          "last_vulnerable": "2.1.252",
+          "status_date": "2026-10-23",
+          "detail": "Confirmed live on 2.1.252 at the 1 September retest. The 23 October changelog for 2.1.310 says ultrareview now requires workspace trust.",
+          "caveat": "UNVERIFIED: this rests on the vendor's changelog alone. No independent retest of the original finding was found. A changelog line is the vendor's claim, not a retest.",
+          "gate": true,
+          "evidence": [{"origin": "claude-code-changelog", "note": "changelog line for 2.1.310"}]
+        }
+      ]
+    },
+    {
+      "id": "codex",
+      "name": "OpenAI Codex (CLI and Desktop)",
+      "detect": {"npm_packages": ["@openai/codex"]},
+      "findings": [
+        {
+          "id": "codex-fsmonitor",
+          "path": "repository-controlled git configuration read during routine git calls",
+          "sinks": ["core.fsmonitor"],
+          "status": "fixed",
+          "fixed_in": "",
+          "last_vulnerable": "",
+          "status_date": "2026-09-01",
+          "detail": "Reported fixed as of the 1 September retest (CVE-2026-19592 for the CLI, CVE-2026-19593 for Desktop). The fixed-in version was not established.",
+          "caveat": "",
+          "gate": false,
+          "evidence": [{"origin": "manifold-disclosure", "note": "patch table"}]
+        }
+      ]
+    },
+    {
+      "id": "cursor",
+      "name": "Cursor",
+      "detect": {},
+      "findings": [
+        {
+          "id": "cursor-fsmonitor",
+          "path": "repository-supplied command run before the workspace-trust prompt",
+          "sinks": ["core.fsmonitor"],
+          "status": "fixed",
+          "fixed_in": "",
+          "last_vulnerable": "",
+          "status_date": "2026-09-01",
+          "detail": "Reported 8 July 2026 and closed as a duplicate of an internal report; listed as patched at the 1 September retest. The fixed-in version was not established.",
+          "caveat": "",
+          "gate": false,
+          "evidence": [{"origin": "manifold-disclosure", "note": "patch table"}]
+        }
+      ]
+    },
+    {
+      "id": "goose",
+      "name": "goose",
+      "detect": {},
+      "findings": [
+        {
+          "id": "goose-review",
+          "path": "goose review running git, reading core.fsmonitor",
+          "sinks": ["core.fsmonitor"],
+          "status": "fixed",
+          "fixed_in": "1.44.0",
+          "last_vulnerable": "",
+          "status_date": "2026-09-01",
+          "detail": "All versions before 1.44.0 are affected (CVE-2026-72718).",
+          "caveat": "",
+          "gate": false,
+          "evidence": [{"origin": "manifold-disclosure", "note": "patch table; advisory quoted in coverage"}]
+        }
+      ]
+    },
+    {
+      "id": "hermes-agent",
+      "name": "Hermes Agent",
+      "detect": {},
+      "findings": [
+        {
+          "id": "hermes-fsmonitor",
+          "path": "repository git configuration read by automatic git calls before the first prompt",
+          "sinks": ["core.fsmonitor", "filter.*.clean", "filter.*.smudge", "filter.*.process"],
+          "status": "unknown",
+          "fixed_in": "",
+          "last_vulnerable": "0.21.0",
+          "status_date": "2026-09-01",
+          "detail": "Confirmed on 0.18.2 and 0.21.0 with the fix pending (CVE-2026-71963). A later release, 0.21.6, hardened git filter programs for a different private reporter; whether the original finding is closed was not established. Latest release seen: 0.22.5 (22 Oct 2026).",
+          "caveat": "UNVERIFIED: status after 1 September 2026 is not established by any independent retest.",
+          "gate": true,
+          "evidence": [{"origin": "manifold-disclosure", "note": "unpatched at retest"}],
+          "context_evidence": [{"origin": "hermes-agent-changelog", "note": "v0.21.6 filter hardening, separate reporter; related, not the same finding"}]
+        }
+      ]
+    },
+    {
+      "id": "qwen-code",
+      "name": "Qwen Code",
+      "detect": {"npm_packages": ["@qwen-code/qwen-code"]},
+      "findings": [
+        {
+          "id": "qwen-code-fsmonitor",
+          "path": "repository git configuration read by routine git calls",
+          "sinks": ["core.fsmonitor"],
+          "status": "unknown",
+          "fixed_in": "",
+          "last_vulnerable": "0.22.3",
+          "status_date": "2026-09-01",
+          "detail": "Confirmed on 0.19.6 and 0.22.3; accepted by the vendor's security response centre on 7 July 2026; no fix at the 1 September retest. No later fix was found, and a search that finds nothing is not evidence that nothing was released.",
+          "caveat": "UNVERIFIED: status unknown since 1 September 2026.",
+          "gate": true,
+          "evidence": [{"origin": "manifold-disclosure", "note": "unpatched at retest"}]
+        }
+      ]
+    },
+    {
+      "id": "grok-build",
+      "name": "Grok Build",
+      "detect": {},
+      "findings": [
+        {
+          "id": "grok-build-fsmonitor",
+          "path": "repository git configuration read by routine git calls",
+          "sinks": ["core.fsmonitor"],
+          "status": "unknown",
+          "fixed_in": "",
+          "last_vulnerable": "1.0.13",
+          "status_date": "2026-09-01",
+          "detail": "Confirmed on 0.2.93 and 1.0.13; the report was closed as a duplicate of an earlier report the vendor had itself closed as informative. No later fix was found.",
+          "caveat": "UNVERIFIED: status unknown since 1 September 2026.",
+          "gate": true,
+          "evidence": [{"origin": "manifold-disclosure", "note": "unpatched at retest"}]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sinkcheck"
+version = "1.0.1"
+description = "Read-only pre-flight scan for git configuration execution sinks."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = []
+
+[project.scripts]
+sinkcheck = "sinkcheck.cli:main"
+
+[tool.setuptools]
+packages = ["sinkcheck"]
+
+[tool.setuptools.package-data]
+sinkcheck = ["data/*.json"]
