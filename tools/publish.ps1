@@ -3,6 +3,7 @@ Create the GitHub repository GHC and push this tree to it.
 
 Run from anywhere:   powershell -ExecutionPolicy Bypass -File X:\GHC\tools\publish.ps1
 Options:             -Visibility public   (default is private)
+                     -Account NAME        (default: you pick from a menu before anything is created)
                      -Name OTHERNAME      (default GHC)
 
 Needs git and the GitHub CLI (gh), signed in:  gh auth login
@@ -15,11 +16,13 @@ What it does, in order, and stops at the first problem:
   2. refuses to go on if any other nested .git directory is found
   3. runs the detonation gate and the full suite (tools\run_gate.py)
   4. copies docs\ci.yml.example to .github\workflows\ci.yml
-  5. git init, commit, then gh repo create <Name> --source . --push
+  5. shows the signed-in accounts, you pick one, you type YES to confirm
+  6. git init, commit, then gh repo create <Account>/<Name> --source . --push
 #>
 param(
     [string]$Name = "GHC",
-    [ValidateSet("private", "public")] [string]$Visibility = "private"
+    [ValidateSet("private", "public")] [string]$Visibility = "private",
+    [string]$Account = ""      # skip the menu: create the repo under this signed-in account
 )
 $ErrorActionPreference = "Stop"
 
@@ -60,7 +63,9 @@ if (Test-Path -LiteralPath $demoGit) {
 }
 
 Step "2. Look for any other nested .git"
-$nested = Get-ChildItem -LiteralPath $root -Recurse -Force -Directory -Filter ".git" -ErrorAction SilentlyContinue
+$ownGit = Join-Path $root ".git"   # this folder's own repository (left by an earlier run) is expected
+$nested = Get-ChildItem -LiteralPath $root -Recurse -Force -Directory -Filter ".git" -ErrorAction SilentlyContinue |
+    Where-Object { $_.FullName -ne $ownGit }
 if ($nested) {
     $nested | ForEach-Object { Write-Host "  found: $($_.FullName)" -ForegroundColor Red }
     throw "nested .git directories found; remove or move them first"
@@ -75,19 +80,53 @@ Step "4. CI workflow"
 New-Item -ItemType Directory -Force -Path ".github\workflows" | Out-Null
 Copy-Item -LiteralPath "docs\ci.yml.example" -Destination ".github\workflows\ci.yml" -Force
 
-Step "5. Commit and push"
+Step "5. Choose the GitHub account"
+$prev = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+$statusText = (gh auth status 2>&1 | Out-String)
+$ErrorActionPreference = $prev
+$accounts = @()
+foreach ($m in [regex]::Matches($statusText, "Logged in to github\.com account (\S+)")) { $accounts += $m.Groups[1].Value }
+if ($accounts.Count -eq 0) { throw "no signed-in GitHub account found (run: gh auth login)" }
+
+if ($Account) {
+    if ($accounts -notcontains $Account) { throw "'$Account' is not signed in to gh. Signed in: $($accounts -join ', ')" }
+} else {
+    Write-Host "Signed-in GitHub accounts:"
+    for ($i = 0; $i -lt $accounts.Count; $i++) { Write-Host ("  [{0}] {1}" -f ($i + 1), $accounts[$i]) }
+    $pick = Read-Host "Create '$Name' under which account? (number)"
+    $n = 0
+    if (-not [int]::TryParse($pick, [ref]$n) -or $n -lt 1 -or $n -gt $accounts.Count) { throw "no valid account chosen; nothing was created" }
+    $Account = $accounts[$n - 1]
+}
+gh auth switch -h github.com -u $Account
+Must "gh auth switch"
+
+$email = (git config user.email)
+$remotes = @(git remote)
+Write-Host ""
+Write-Host "About to create and push:" -ForegroundColor Yellow
+Write-Host "  repository : $Account/$Name ($Visibility)"
+Write-Host "  commit email: $email  (GitHub credits the commit to whichever account owns this email)"
+if ($remotes -contains "origin") { Write-Host "  existing origin $(git remote get-url origin) will be removed from this folder (the remote repository itself is not touched)" }
+$ok = Read-Host "Type YES to create and push, anything else cancels"
+if ($ok -ne "YES") { throw "cancelled; nothing was created or pushed" }
+
+Step "6. Commit and push"
 if (-not (Test-Path -LiteralPath ".git")) { git init -b main; Must "git init" }
 git add -A
 Must "git add"
-git status --short
-git commit -m "sinkcheck 1.0.1: read-only scanner for git config execution sinks"
-Must "git commit (set your identity with: git config --global user.name / user.email)"
+if (git status --porcelain) {
+    git commit -m "sinkcheck 1.0.1: read-only scanner for git config execution sinks"
+    Must "git commit (set your identity with: git config --global user.name / user.email)"
+}
 $meta = (git log -1 --format="%an%n%ae%n%cn%n%ce%n%B") -join "`n"
 if ($meta -match "(?i)claude|anthropic|co-authored-by") {
     throw "commit metadata mentions an author or co-author you did not intend; fix it (git commit --amend --reset-author) and re-run"
 }
-gh repo create $Name "--$Visibility" --source . --remote origin --push
+if ($remotes -contains "origin") { git remote remove origin; Must "git remote remove" }
+gh repo create "$Account/$Name" "--$Visibility" --source . --remote origin --push
 Must "gh repo create"
 
 Write-Host ""
-Write-Host "Done. Repository: $Name ($Visibility)" -ForegroundColor Green
+Write-Host "Done. https://github.com/$Account/$Name ($Visibility)" -ForegroundColor Green
