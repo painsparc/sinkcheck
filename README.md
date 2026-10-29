@@ -1,48 +1,77 @@
 # sinkcheck
 
 Read-only pre-flight check for git configuration execution sinks: settings in
-a repository's own git configuration that make git run a command, which AI
-coding agents trigger by running `git status` or `git diff` for context.
+a repository's own git configuration that make git run a command, which coding
+agents trigger when they run git (for example `git status`) to gather context.
 
 Python 3.9+, standard library only. No network, no telemetry, no branding.
 
-## The research, and two corrections to what is widely repeated
+## Background
 
-In September 2026 Manifold Security disclosed eight findings across seven AI
-coding agents (the write-up is called GitSpawn): a repository's own
-`.git/config` can set `core.fsmonitor` to a command, and an agent that runs
-`git status` or `git diff` for context makes git execute it, as the user,
-outside the agent's sandbox, with no approval prompt. On several agents it
-fires before the workspace-trust prompt.
+On 1 September 2026 Manifold Security disclosed GitSpawn: eight findings
+across seven AI coding agents, all in one class of bug. A repository can tell
+git to run a command, and coding agents run git constantly to gather context,
+without asking. In the main case, a repository's own `.git/config` sets
+`core.fsmonitor` to a command, and the agent's routine `git status` executes
+it, as the user, outside the agent's sandbox. On several agents it ran before
+the user had accepted a trust prompt, or before they had even authenticated.
 
-1. **It was disclosed on 1 September 2026, not October.** Coverage dated
-   October is derivative of that one disclosure; counting those posts as
-   independent confirmation counts one source many times. Almost every
-   per-agent status after 1 September is therefore single-sourced, and this
-   tool labels it that way.
-2. **An ordinary `git clone` does not deliver a malicious `.git/config`.**
-   Cloning builds a fresh local config; it does not copy the remote's.
-   The delivery paths are a directory copied with its `.git` folder intact
-   (zip archive, shared drive, USB stick) and one that does survive
-   `git clone`: a **bare repository buried in a subdirectory**. Git refuses
-   to commit a `.git` directory but has no such rule for a directory shaped
-   like a bare repo (`HEAD`, `objects/`, `refs/`), and running git from that
-   subdirectory honours its `config`. That variant was documented in 2022
-   (Steven, OVE-20210718-0001).
+### How it reaches you
 
-Git's own protections barely apply. `safe.directory` checks directory
-ownership, and an unpacked archive is owned by you. `safe.bareRepository`
-(opt-in, introduced in git 2.38.0 per the cited advisory, single-source)
-addresses only the buried-bare-repo discovery path. Setting
-`core.fsmonitor=false` in your *global* config does not stop a repository's
-own config from setting it: git reads system, then global, then repository
-config, and the last value found wins (git-config(1), FILES section: "The
-files are read in the order given above, with last value found taking
-precedence over values read earlier"; Pro Git, "Customizing Git - Git
-Configuration": "Each of these levels (system, global, local) overwrites
-values in the previous level"). Two cited sources. A per-call
-`git -c core.fsmonitor=false ...` is the usual way to outrank repository
-config; neither citation covers that half, so it is single-sourced here.
+Cloning a malicious repository does not, on its own, deliver this. Cloning
+builds a fresh `.git/config` on your machine; the remote's is not copied.
+
+The usual delivery path is a directory that travels with its `.git` folder
+intact: a zipped project, a shared or synced folder, a USB stick, an
+attachment.
+
+One known path does survive cloning. Git will not let you commit a directory
+named `.git`, but it will let you commit a directory laid out like a bare
+repository, with its own `HEAD`, `objects`, `refs` and `config`. Run git from
+inside that directory, or from anywhere beneath it, and git uses that config.
+From the root of the clone, it does not. Justin Steven documented this "buried
+bare repository" technique in 2022 (OVE-20210718-0001).
+
+### What protects you, and what does not
+
+Each of these was reproduced on git 2.43.0 with a harmless marker payload.
+
+- **A global `core.fsmonitor=false` does not protect you.** Git reads system,
+  then global, then repository configuration, and the last value wins, as the
+  FILES section of git-config(1) documents. A repository that sets
+  `core.fsmonitor` overrides your global `false`.
+- **A per-command override works, for one key.** `git -c core.fsmonitor=
+  status` and `git -c core.fsmonitor=false status` both stopped the payload.
+- **`safe.bareRepository=explicit` stops the buried-bare-repository path, and
+  only that path.** It did nothing against a repository delivered with its
+  `.git` folder. It is opt-in in current releases. A patch series on the git
+  mailing list proposes making `explicit` the default in Git 3.0; that is a
+  proposal, not a decision.
+- **`safe.directory` rarely helps here.** It checks who owns the repository.
+  You own anything you have just unzipped, so it does not trigger. On a shared
+  or network drive the owner may be someone else, and then it does block.
+
+### More than `core.fsmonitor`
+
+`core.fsmonitor` gets the attention because it fires on the quietest thing an
+agent does, refreshing the index. Other settings can run commands too, and
+some only in certain conditions:
+
+- **`core.hooksPath`** redirects hooks to a directory the repository controls.
+  A `post-index-change` hook ran when `git status` rewrote the index, which it
+  does in a freshly unpacked tree. It does not fire on every `git status`.
+- **Filter drivers** (`clean`, `smudge`, `process`) run when git processes the
+  content of a path that attributes assign to them. Attributes can come from
+  `.gitattributes`, `.git/info/attributes`, `core.attributesFile` and
+  `attr.tree`. CVE-2026-19593 describes `attr.tree` combined with a configured
+  filter driver, in Codex Desktop.
+- **Diff `textconv` drivers** run when a diff touches a matching path.
+- **`core.pager`** only runs when git's output goes to a terminal.
+
+There is no complete list. A great many git configuration options can run
+commands, and annotating each one risks missing some (Jeff King, git mailing
+list, 2017, quoted in Steven's advisory). Treat any checklist, including this
+tool, as incomplete.
 
 Sources for every sink are in `sinkcheck/data/sinks.json`, with an evidence
 label per sink: *two cited sources*, *single source*, or *unverified*.
@@ -79,8 +108,8 @@ with filter/diff/merge drivers (`.gitattributes`, `info/attributes`, and a
 variables.
 
 **preflight** adds a dated, sourced per-agent patch table. Versions come from
-`--agent ID=VERSION` or from `package.json` files in common global npm
-locations; an agent is never run to ask its version. A patched agent never
+`--agent ID=VERSION` or from global npm `package.json` files; agents not
+installed through npm need the flag. An agent is never run to ask its version. A patched agent never
 clears a tree that has findings, and an unverified or unknown agent status
 holds the verdict at needs-review.
 
@@ -111,8 +140,8 @@ package. The full suite follows. git must be installed to run the gate.
 
 ## Limits
 
-A clean scan is not a clean bill of health. The sink list is not exhaustive;
-git's maintainers have said an exhaustive list is not achievable. Not
+A clean scan is not a clean bill of health. The sink list is not exhaustive,
+and no complete list exists. Not
 examined: hook file contents, attribute files outside the target, `includeIf`
 conditions (every conditional include is followed and flagged), submodules
 not present, running processes, editor extensions, and an agent's own
@@ -147,7 +176,7 @@ Windows:
 Any platform:
 
 - **`attr.tree` contents are not read.** `attr.tree` makes git take
-  attributes from a tree object (the CVE-2026-19593 vector). sinkcheck does
+  attributes from a tree object (see CVE-2026-19593, above). sinkcheck does
   not read git objects, so it reports `attr.tree` as needs-review and notes on
   every unpaired driver that the tree may select it, but it cannot say which
   paths or drivers the tree selects.
