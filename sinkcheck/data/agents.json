@@ -3,7 +3,7 @@
   "data_version": 2,
   "data_date": "2026-10-29",
   "stale_after_days": 30,
-  "note": "Per-agent status is a dated snapshot and is mostly single-sourced: nearly all coverage after 1 September 2026 derives from one disclosure. Every row says so. Verify with your vendor.",
+  "note": "Per-agent status is a dated snapshot. Rows drawn from Manifold Security's 1 September 2026 disclosure carry its status as of that date; rows marked UNVERIFIED rest only on a vendor changelog, with no independent retest. Verify with your vendor.",
   "origins": {
     "manifold-disclosure": {
       "title": "Manifold Security, GitSpawn disclosure and 1 September 2026 retest (patch table). Later roundups repeat this table and are not counted as separate sources.",

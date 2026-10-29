@@ -273,13 +273,14 @@
         "hookspath"
       ],
       "protections": "none",
-      "triggers": "Redirects hook lookup to any directory, so hooks need not live inside .git/hooks. Executable files there run on hook-firing operations.",
+      "triggers": "Redirects hook lookup to any directory the repository controls, so hooks need not live inside .git/hooks. Executable files there run on hook-firing operations. A post-index-change hook ran when git status rewrote the index, which it does in a freshly unpacked tree; it does not fire on every git status.",
       "reached_by": [
         "commit",
         "checkout",
         "merge",
         "rebase",
         "push",
+        "git status, when it rewrites the index (as in a freshly unpacked tree)",
         "other hook-firing operations"
       ],
       "evidence": [
