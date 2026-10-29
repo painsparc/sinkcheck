@@ -1,74 +1,143 @@
 {
   "schema_version": 1,
-  "data_version": 1,
-  "data_date": "2026-10-27",
+  "data_version": 2,
+  "data_date": "2026-10-29",
   "stale_after_days": 30,
   "note": "Per-agent status is a dated snapshot and is mostly single-sourced: nearly all coverage after 1 September 2026 derives from one disclosure. Every row says so. Verify with your vendor.",
   "origins": {
     "manifold-disclosure": {
-      "title": "Manifold Security GitSpawn disclosure and 1 September 2026 retest, as reported by The Hacker News (2 Sep 2026). Later roundups repeat this table and are not counted as separate sources.",
-      "url": "https://thehackernews.com/2026/09/malicious-git-configs-can-make-claude.html"
+      "title": "Manifold Security, GitSpawn disclosure and 1 September 2026 retest (patch table). Later roundups repeat this table and are not counted as separate sources.",
+      "url": "https://www.manifold.security/blog/ai-coding-agents-git-hijack"
     },
     "claude-code-changelog": {
-      "title": "Claude Code changelog v2.1.310 (23 Oct 2026), via a third-party mirror. Triage notes that quote the same changelog are the same origin.",
+      "title": "Claude Code changelog, 2.1.309 (22 Oct 2026), via a third-party mirror. Triage notes that quote the same changelog are the same origin.",
       "url": "https://claudelog.com/claude-code-changelog/"
     },
     "hermes-agent-changelog": {
-      "title": "Hermes Agent changelog (v0.21.6 filter hardening, v0.22.x)",
-      "url": "https://www.gradually.ai/en/changelogs/hermes-agent/"
+      "title": "Hermes Agent v0.21.6 release notes (8 Oct 2026): repository git filter hardening",
+      "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v0.21.6"
+    },
+    "hermes-cve-2026-71963": {
+      "title": "CVE-2026-71963 (VulnCheck): Hermes Agent 0.18.2 to 0.21.0, fixed in commit f6234d0",
+      "url": "https://www.cve.org/CVERecord?id=CVE-2026-71963"
+    },
+    "hermes-v0.21.1": {
+      "title": "Hermes Agent v0.21.1 release (7 Sep 2026)",
+      "url": "https://github.com/NousResearch/hermes-agent/releases/tag/v2026.9.7"
+    },
+    "openai-cve-2026-19592": {
+      "title": "CVE-2026-19592: Codex CLI and Desktop, core.fsmonitor; fixed in CLI 0.131.0 and Desktop 26.519.x",
+      "url": "https://www.cve.org/CVERecord?id=CVE-2026-19592"
+    },
+    "openai-cve-2026-19590": {
+      "title": "CVE-2026-19590: Codex Desktop only, core.hooksPath",
+      "url": "https://www.cve.org/CVERecord?id=CVE-2026-19590"
+    },
+    "openai-cve-2026-19593": {
+      "title": "CVE-2026-19593: Codex Desktop, attr.tree with clean/process filter drivers",
+      "url": "https://www.cve.org/CVERecord?id=CVE-2026-19593"
+    },
+    "qwen-code-v0.21.9": {
+      "title": "Qwen Code v0.21.9 release notes (10 Aug 2026)",
+      "url": "https://github.com/QwenLM/qwen-code/releases/tag/v0.21.9"
     }
   },
   "agents": [
     {
       "id": "claude-code",
       "name": "Claude Code",
-      "detect": {"npm_packages": ["@anthropic-ai/claude-code"]},
+      "detect": {
+        "npm_packages": [
+          "@anthropic-ai/claude-code"
+        ]
+      },
       "findings": [
         {
           "id": "claude-code-fsmonitor",
           "path": "core.fsmonitor read by git status / git diff probes",
-          "sinks": ["core.fsmonitor"],
+          "sinks": [
+            "core.fsmonitor"
+          ],
           "status": "fixed",
           "fixed_in": "2.1.196",
           "last_vulnerable": "2.1.193",
-          "status_date": "2026-09-01",
+          "status_date": "2026-10-29",
           "detail": "Confirmed vulnerable on 2.1.193; fixed by 2.1.196 per the 1 September retest.",
           "caveat": "",
           "gate": false,
-          "evidence": [{"origin": "manifold-disclosure", "note": "patch table and retest"}]
+          "evidence": [
+            {
+              "origin": "manifold-disclosure",
+              "note": "patch table and retest"
+            }
+          ]
         },
         {
           "id": "claude-code-ultrareview",
           "path": "claude ultrareview (a different git configuration key; the key was withheld by the researchers)",
           "sinks": [],
-          "status": "fixed",
-          "fixed_in": "2.1.310",
+          "status": "unpatched",
+          "fixed_in": "",
           "last_vulnerable": "2.1.252",
-          "status_date": "2026-10-23",
-          "detail": "Confirmed live on 2.1.252 at the 1 September retest. The 23 October changelog for 2.1.310 says ultrareview now requires workspace trust.",
-          "caveat": "UNVERIFIED: this rests on the vendor's changelog alone. No independent retest of the original finding was found. A changelog line is the vendor's claim, not a retest.",
+          "status_date": "2026-10-29",
+          "detail": "Unpatched at 2.1.252 at the 1 September retest. The 2.1.309 changelog (22 Oct 2026) adds a workspace-trust check to claude ultrareview, which asks on a terminal and refuses otherwise; scripts can skip it with --trust-workspace or CLAUDE_CODE_DISABLE_ULTRAREVIEW_TRUST_CHECK=1. The entry does not say the git issue itself is fixed.",
+          "caveat": "UNVERIFIED: no independent retest of the original finding after 1 September 2026. A changelog line is the vendor's claim, not a retest.",
           "gate": true,
-          "evidence": [{"origin": "claude-code-changelog", "note": "changelog line for 2.1.310"}]
+          "evidence": [
+            {
+              "origin": "manifold-disclosure",
+              "note": "unpatched at retest on 2.1.252"
+            }
+          ],
+          "context_evidence": [
+            {
+              "origin": "claude-code-changelog",
+              "note": "2.1.309 workspace-trust check for ultrareview; does not state the git issue is fixed"
+            }
+          ]
         }
       ]
     },
     {
       "id": "codex",
       "name": "OpenAI Codex (CLI and Desktop)",
-      "detect": {"npm_packages": ["@openai/codex"]},
+      "detect": {
+        "npm_packages": [
+          "@openai/codex"
+        ]
+      },
       "findings": [
         {
           "id": "codex-fsmonitor",
-          "path": "repository-controlled git configuration read during routine git calls",
-          "sinks": ["core.fsmonitor"],
+          "path": "repository-controlled git configuration read during routine git calls (mechanism differs somewhat from core.fsmonitor, per Manifold)",
+          "sinks": [],
           "status": "fixed",
           "fixed_in": "",
           "last_vulnerable": "",
-          "status_date": "2026-09-01",
-          "detail": "Reported fixed as of the 1 September retest (CVE-2026-19592 for the CLI, CVE-2026-19593 for Desktop). The fixed-in version was not established.",
+          "status_date": "2026-10-29",
+          "detail": "Reported 20 July 2026, closed as a duplicate of an earlier report, and listed as patched by Manifold. Manifold names no CVE or version for its finding. Related OpenAI CVEs: CVE-2026-19592 (core.fsmonitor, fixed in CLI 0.131.0 and Desktop 26.519.x), CVE-2026-19590 (core.hooksPath, Desktop only) and CVE-2026-19593 (attr.tree with filter drivers, Desktop).",
           "caveat": "",
           "gate": false,
-          "evidence": [{"origin": "manifold-disclosure", "note": "patch table"}]
+          "evidence": [
+            {
+              "origin": "manifold-disclosure",
+              "note": "patch table: patched, no CVE or version given"
+            }
+          ],
+          "context_evidence": [
+            {
+              "origin": "openai-cve-2026-19592",
+              "note": "core.fsmonitor; CLI 0.131.0, Desktop 26.519.x"
+            },
+            {
+              "origin": "openai-cve-2026-19590",
+              "note": "core.hooksPath; Desktop only"
+            },
+            {
+              "origin": "openai-cve-2026-19593",
+              "note": "attr.tree with filter drivers; Desktop"
+            }
+          ]
         }
       ]
     },
@@ -80,15 +149,22 @@
         {
           "id": "cursor-fsmonitor",
           "path": "repository-supplied command run before the workspace-trust prompt",
-          "sinks": ["core.fsmonitor"],
+          "sinks": [
+            "core.fsmonitor"
+          ],
           "status": "fixed",
           "fixed_in": "",
           "last_vulnerable": "",
-          "status_date": "2026-09-01",
+          "status_date": "2026-10-29",
           "detail": "Reported 8 July 2026 and closed as a duplicate of an internal report; listed as patched at the 1 September retest. The fixed-in version was not established.",
           "caveat": "",
           "gate": false,
-          "evidence": [{"origin": "manifold-disclosure", "note": "patch table"}]
+          "evidence": [
+            {
+              "origin": "manifold-disclosure",
+              "note": "patch table"
+            }
+          ]
         }
       ]
     },
@@ -100,15 +176,22 @@
         {
           "id": "goose-review",
           "path": "goose review running git, reading core.fsmonitor",
-          "sinks": ["core.fsmonitor"],
+          "sinks": [
+            "core.fsmonitor"
+          ],
           "status": "fixed",
           "fixed_in": "1.44.0",
           "last_vulnerable": "",
-          "status_date": "2026-09-01",
+          "status_date": "2026-10-29",
           "detail": "All versions before 1.44.0 are affected (CVE-2026-72718).",
           "caveat": "",
           "gate": false,
-          "evidence": [{"origin": "manifold-disclosure", "note": "patch table; advisory quoted in coverage"}]
+          "evidence": [
+            {
+              "origin": "manifold-disclosure",
+              "note": "patch table; advisory quoted in coverage"
+            }
+          ]
         }
       ]
     },
@@ -119,37 +202,88 @@
       "findings": [
         {
           "id": "hermes-fsmonitor",
-          "path": "repository git configuration read by automatic git calls before the first prompt",
-          "sinks": ["core.fsmonitor", "filter.*.clean", "filter.*.smudge", "filter.*.process"],
-          "status": "unknown",
-          "fixed_in": "",
+          "path": "core.fsmonitor read by the git status refresh on the first message",
+          "sinks": [
+            "core.fsmonitor"
+          ],
+          "status": "fixed",
+          "fixed_in": "0.21.1",
           "last_vulnerable": "0.21.0",
-          "status_date": "2026-09-01",
-          "detail": "Confirmed on 0.18.2 and 0.21.0 with the fix pending (CVE-2026-71963). A later release, 0.21.6, hardened git filter programs for a different private reporter; whether the original finding is closed was not established. Latest release seen: 0.22.5 (22 Oct 2026).",
-          "caveat": "UNVERIFIED: status after 1 September 2026 is not established by any independent retest.",
-          "gate": true,
-          "evidence": [{"origin": "manifold-disclosure", "note": "unpatched at retest"}],
-          "context_evidence": [{"origin": "hermes-agent-changelog", "note": "v0.21.6 filter hardening, separate reporter; related, not the same finding"}]
+          "status_date": "2026-10-29",
+          "detail": "Unpatched at 0.21.0 at the 1 September retest (CVE-2026-71963). Fixed in 0.21.1 (commit f6234d0, 2 September). A public proof-of-concept fires on the commit before the fix and not on 0.21.2.",
+          "caveat": "",
+          "gate": false,
+          "evidence": [
+            {
+              "origin": "hermes-cve-2026-71963",
+              "note": "fixed in commit f6234d0"
+            }
+          ],
+          "context_evidence": [
+            {
+              "origin": "hermes-v0.21.1",
+              "note": "first tagged release after the fix commit"
+            }
+          ]
+        },
+        {
+          "id": "hermes-filter-drivers",
+          "path": "clean/smudge/process filter programs from the repository's own config, run by automatic git calls before the first prompt",
+          "sinks": [
+            "filter.*.clean",
+            "filter.*.smudge",
+            "filter.*.process"
+          ],
+          "status": "fixed",
+          "fixed_in": "0.21.6",
+          "last_vulnerable": "",
+          "status_date": "2026-10-29",
+          "detail": "Fixed separately in 0.21.6 (8 October 2026), which shipped for the CLI and Docker. The desktop app and Termux stay on their previous build until the next bundled release.",
+          "caveat": "Applies to the CLI and Docker. The desktop app and Termux were not updated by 0.21.6.",
+          "gate": false,
+          "evidence": [
+            {
+              "origin": "hermes-agent-changelog",
+              "note": "repository git filter hardening"
+            }
+          ]
         }
       ]
     },
     {
       "id": "qwen-code",
       "name": "Qwen Code",
-      "detect": {"npm_packages": ["@qwen-code/qwen-code"]},
+      "detect": {
+        "npm_packages": [
+          "@qwen-code/qwen-code"
+        ]
+      },
       "findings": [
         {
           "id": "qwen-code-fsmonitor",
           "path": "repository git configuration read by routine git calls",
-          "sinks": ["core.fsmonitor"],
-          "status": "unknown",
+          "sinks": [
+            "core.fsmonitor"
+          ],
+          "status": "unpatched",
           "fixed_in": "",
           "last_vulnerable": "0.22.3",
-          "status_date": "2026-09-01",
-          "detail": "Confirmed on 0.19.6 and 0.22.3; accepted by the vendor's security response centre on 7 July 2026; no fix at the 1 September retest. No later fix was found, and a search that finds nothing is not evidence that nothing was released.",
-          "caveat": "UNVERIFIED: status unknown since 1 September 2026.",
+          "status_date": "2026-10-29",
+          "detail": "Unpatched at 0.22.3 at the 1 September retest (confirmed on 0.19.6 and 0.22.3; accepted by the vendor's security response centre on 7 July 2026). 0.21.9 (10 August, before the retest) added confirmation for read-only git commands when diff.external or core.fsmonitor is set; Manifold still reproduced the startup call on 0.22.3. No fix found for the startup path.",
+          "caveat": "UNVERIFIED: no independent retest after 1 September 2026; no fix found, and a search that finds nothing is not evidence that nothing was released.",
           "gate": true,
-          "evidence": [{"origin": "manifold-disclosure", "note": "unpatched at retest"}]
+          "evidence": [
+            {
+              "origin": "manifold-disclosure",
+              "note": "unpatched at retest"
+            }
+          ],
+          "context_evidence": [
+            {
+              "origin": "qwen-code-v0.21.9",
+              "note": "confirmation for read-only git commands; predates the retest"
+            }
+          ]
         }
       ]
     },
@@ -161,15 +295,22 @@
         {
           "id": "grok-build-fsmonitor",
           "path": "repository git configuration read by routine git calls",
-          "sinks": ["core.fsmonitor"],
-          "status": "unknown",
+          "sinks": [
+            "core.fsmonitor"
+          ],
+          "status": "unpatched",
           "fixed_in": "",
           "last_vulnerable": "1.0.13",
-          "status_date": "2026-09-01",
-          "detail": "Confirmed on 0.2.93 and 1.0.13; the report was closed as a duplicate of an earlier report the vendor had itself closed as informative. No later fix was found.",
-          "caveat": "UNVERIFIED: status unknown since 1 September 2026.",
+          "status_date": "2026-10-29",
+          "detail": "Unpatched at 1.0.13 at the 1 September retest (confirmed on 0.2.93 and 1.0.13; closed as a duplicate of an earlier report the vendor had closed as informative). No fix found.",
+          "caveat": "UNVERIFIED: could not verify either way after 1 September 2026; no fix found.",
           "gate": true,
-          "evidence": [{"origin": "manifold-disclosure", "note": "unpatched at retest"}]
+          "evidence": [
+            {
+              "origin": "manifold-disclosure",
+              "note": "unpatched at retest"
+            }
+          ]
         }
       ]
     }

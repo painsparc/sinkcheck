@@ -26,7 +26,10 @@ class AgentDataTests(unittest.TestCase):
 
     def test_eight_findings_across_seven_agents(self):
         self.assertEqual(len(self.data.agents), 7)
-        self.assertEqual(len(self.by_id), 8)
+        manifold = [f for f in self.by_id.values() if any(e.origin == "manifold-disclosure" for e in f.evidence)
+                    or f.id == "hermes-fsmonitor"]
+        self.assertEqual(len(manifold), 8)
+        self.assertIn("hermes-filter-drivers", self.by_id)  # a related fix, not a Manifold finding
 
     def test_every_finding_cites_evidence_and_is_dated(self):
         for f in self.by_id.values():
@@ -98,13 +101,27 @@ class AssessTests(unittest.TestCase):
         self.assertFalse(agents.assess(f, "2.1.196").floors_review)
         self.assertEqual(agents.assess(f, None).level, "version-unknown")
 
-    def test_ultrareview_fixed_row_still_floors_review(self):
+    def test_ultrareview_is_unpatched_and_a_later_version_is_unknown(self):
         f = self.f["claude-code-ultrareview"]
+        self.assertEqual(f.status, "unpatched")
         self.assertEqual(agents.assess(f, "2.1.252").level, "affected")
-        self.assertEqual(agents.assess(f, "2.1.309").level, "affected")
-        a = agents.assess(f, "2.1.310")
-        self.assertEqual(a.level, "ok")
-        self.assertTrue(a.floors_review)  # unverified fix is never a clean verdict
+        a = agents.assess(f, "2.1.309")
+        self.assertEqual(a.level, "unknown")  # the trust check is not a confirmed fix
+        self.assertTrue(a.floors_review)
+
+    def test_codex_names_no_cve_for_manifolds_finding(self):
+        f = self.f["codex-fsmonitor"]
+        self.assertEqual(f.fixed_in, "")
+        self.assertEqual({e.origin for e in f.context},
+                         {"openai-cve-2026-19592", "openai-cve-2026-19590", "openai-cve-2026-19593"})
+        self.assertEqual(f.verification, "single-source")  # related CVEs are context, not verification
+
+    def test_hermes_boundaries(self):
+        fs, flt = self.f["hermes-fsmonitor"], self.f["hermes-filter-drivers"]
+        self.assertEqual(agents.assess(fs, "0.21.0").level, "affected")
+        self.assertEqual(agents.assess(fs, "0.21.1").level, "ok")
+        self.assertEqual(agents.assess(flt, "0.21.5").level, "affected")
+        self.assertEqual(agents.assess(flt, "0.21.6").level, "ok")
 
     def test_unknown_status_rows(self):
         f = self.f["qwen-code-fsmonitor"]
@@ -232,7 +249,7 @@ class PreflightTests(unittest.TestCase):
 
     def test_report_is_dated_and_carries_vendor_and_unaffiliated_lines(self):
         text = render_preflight(self.pre(["qwen-code=0.22.3"]))
-        self.assertIn("as of 2026-10-27; verify with your vendor", text)
+        self.assertIn("as of 2026-10-29; verify with your vendor", text)
         self.assertIn("Unaffiliated:", text)
         lines = text.splitlines()
         idx = next(i for i, l in enumerate(lines) if l.startswith("VERDICT:"))
@@ -244,7 +261,7 @@ class PreflightTests(unittest.TestCase):
         pre = self.pre(today=far)
         self.assertTrue(pre.stale)
         self.assertIn("days old", render_preflight(pre))
-        self.assertFalse(self.pre(today=datetime.date(2026, 10, 27)).stale)
+        self.assertFalse(self.pre(today=datetime.date(2026, 10, 29)).stale)
 
     def test_future_dated_table_is_stale(self):
         pre = self.pre(today=datetime.date(2026, 10, 1))
